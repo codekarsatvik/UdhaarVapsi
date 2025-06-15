@@ -12,3 +12,6 @@ livekit-agents[deepgram,cartesia,silero,turn-detector]~=1.0
 livekit-plugins-noise-cancellation~=0.2
 python-multipart==0.0.15
 httpx==0.24.1
+soundfile==0.12.1
+numpy==1.26.4
+scipy==1.12.0

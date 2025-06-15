@@ -136,4 +136,83 @@ document.addEventListener('DOMContentLoaded', () => {
             console.log('WebSocket connection closed');
         };
     }
-}); 
+});
+
+let mediaRecorder;
+let audioChunks = [];
+const log = document.getElementById('log');
+const transcript = document.getElementById('transcript');
+
+function logMessage(message, type = 'info') {
+    const entry = document.createElement('div');
+    entry.className = `log-entry ${type}`;
+    entry.textContent = `${new Date().toLocaleTimeString()}: ${message}`;
+    log.appendChild(entry);
+    log.scrollTop = log.scrollHeight;
+}
+
+async function startRecording() {
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        mediaRecorder = new MediaRecorder(stream);
+        audioChunks = [];
+
+        mediaRecorder.ondataavailable = (event) => {
+            audioChunks.push(event.data);
+        };
+
+        mediaRecorder.onstop = async () => {
+            const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+            const formData = new FormData();
+            formData.append('audio', audioBlob);
+
+            try {
+                logMessage('Sending audio for processing...');
+                const response = await fetch('/webhook/twilio', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to process audio');
+                }
+
+                const result = await response.json();
+                logMessage('Audio processed successfully', 'success');
+            } catch (error) {
+                logMessage(`Error: ${error.message}`, 'error');
+            }
+        };
+
+        mediaRecorder.start();
+        logMessage('Recording started...', 'success');
+    } catch (error) {
+        logMessage(`Error: ${error.message}`, 'error');
+    }
+}
+
+function stopRecording() {
+    if (mediaRecorder && mediaRecorder.state === 'recording') {
+        mediaRecorder.stop();
+        logMessage('Recording stopped...', 'success');
+    }
+}
+
+async function playGreeting() {
+    try {
+        logMessage('Playing greeting...');
+        const response = await fetch('/audio_files/greeting.mp3');
+        
+        if (!response.ok) {
+            throw new Error('Failed to fetch greeting audio');
+        }
+
+        const audioBlob = await response.blob();
+        const audioUrl = URL.createObjectURL(audioBlob);
+        const audio = new Audio(audioUrl);
+        await audio.play();
+        logMessage('Playing greeting...', 'success');
+    } catch (error) {
+        logMessage(`Error: ${error.message}`, 'error');
+    }
+} 

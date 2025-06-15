@@ -4,131 +4,144 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI Debt Collection Voice Agent - Test Interface</title>
-    <style>
-        body {
-            font-family: 'Inter', sans-serif;
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 20px;
-            background-color: #f5f5f5;
-        }
-        .container {
-            background-color: white;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            margin-bottom: 20px;
-        }
-        .test-section {
-            margin-bottom: 30px;
-            padding: 20px;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-        }
-        .test-section h2 {
-            margin-top: 0;
-            color: #2563eb;
-        }
-        .controls {
-            margin: 20px 0;
-            display: flex;
-            gap: 10px;
-            flex-wrap: wrap;
-        }
-        button {
-            padding: 10px 20px;
-            border: none;
-            border-radius: 4px;
-            background-color: #2563eb;
-            color: white;
-            cursor: pointer;
-            transition: background-color 0.2s;
-        }
-        button:hover {
-            background-color: #1d4ed8;
-        }
-        button:disabled {
-            background-color: #ccc;
-        }
-        input, textarea {
-            width: 100%;
-            padding: 8px;
-            margin: 5px 0;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-        }
-        .result {
-            margin-top: 10px;
-            padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            background-color: #f8f9fa;
-            white-space: pre-wrap;
-        }
-        .audio-player {
-            margin-top: 10px;
-            width: 100%;
-        }
-        .status {
-            margin: 10px 0;
-            padding: 10px;
-            border-radius: 4px;
-        }
-        .success {
-            background-color: #d1fae5;
-            color: #065f46;
-        }
-        .error {
-            background-color: #fee2e2;
-            color: #991b1b;
-        }
-        .log {
-            background: #f8f9fa;
-            padding: 15px;
-            border-radius: 4px;
-            height: 200px;
-            overflow-y: auto;
-            margin-bottom: 20px;
-            border: 1px solid #dee2e6;
-        }
-        .transcript {
-            background: #e9ecef;
-            padding: 15px;
-            border-radius: 4px;
-            margin-top: 10px;
-            border: 1px solid #dee2e6;
-        }
-        .log-entry {
-            margin: 5px 0;
-            font-size: 14px;
-            color: #495057;
-        }
-    </style>
+    <link rel="stylesheet" href="/static/styles.css">
 </head>
 <body>
     <div class="container">
         <h1>AI Debt Collection Voice Agent - Test Interface</h1>
-        <div class="controls">
-            <button onclick="startRecording()">Start Recording</button>
-            <button onclick="stopRecording()">Stop Recording</button>
-            <button onclick="playGreeting()">Play Greeting</button>
+        
+        <!-- Test Call Form -->
+        <div class="test-section">
+            <h2>Test Call</h2>
+            <div class="form-group">
+                <label for="testPhoneNumber">Phone Number</label>
+                <input type="tel" id="testPhoneNumber" placeholder="+1234567890" required>
+            </div>
+            <div class="form-group">
+                <label for="testAmount">Amount Due</label>
+                <input type="number" id="testAmount" step="0.01" required>
+            </div>
+            <div class="form-group">
+                <label for="testDueDate">Due Date</label>
+                <input type="date" id="testDueDate" required>
+            </div>
+            <div class="form-group">
+                <label for="testAccountNumber">Account Number (Optional)</label>
+                <input type="text" id="testAccountNumber">
+            </div>
+            <button onclick="startTestCall()" class="call-button">
+                <span class="button-text">Start Test Call</span>
+                <div class="loading-spinner"></div>
+            </button>
         </div>
-        <div class="log" id="log"></div>
-        <div class="transcript" id="transcript"></div>
+
+        <!-- Voice Recording Test -->
+        <div class="test-section">
+            <h2>Voice Recording Test</h2>
+            <div class="controls">
+                <button onclick="startRecording()">Start Recording</button>
+                <button onclick="stopRecording()">Stop Recording</button>
+                <button onclick="playGreeting()">Play Greeting</button>
+            </div>
+            <div class="log" id="log"></div>
+            <div class="transcript" id="transcript"></div>
+        </div>
+
+        <!-- Call Status -->
+        <div class="test-section">
+            <h2>Call Status</h2>
+            <div class="status-card">
+                <div class="status-header">
+                    <span class="status-label">Status:</span>
+                    <span id="callStatus" class="status-value">Not Started</span>
+                </div>
+                <div class="status-details">
+                    <div class="detail-item">
+                        <span class="detail-label">Call ID:</span>
+                        <span id="callId" class="detail-value">-</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Duration:</span>
+                        <span id="callDuration" class="detail-value">00:00</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Conversation Log -->
+        <div class="test-section">
+            <h2>Conversation Log</h2>
+            <div id="conversationContainer" class="conversation-container">
+                <!-- Messages will be added here dynamically -->
+            </div>
+        </div>
     </div>
 
     <script>
-        let mediaRecorder;
+        let callStartTime = null;
+        let durationInterval = null;
+        let mediaRecorder = null;
         let audioChunks = [];
-        const log = document.getElementById('log');
-        const transcript = document.getElementById('transcript');
 
-        function logMessage(message, type = 'info') {
-            const entry = document.createElement('div');
-            entry.className = `log-entry ${type}`;
-            entry.textContent = `${new Date().toLocaleTimeString()}: ${message}`;
-            log.appendChild(entry);
-            log.scrollTop = log.scrollHeight;
+        // Format phone number as user types
+        const phoneInput = document.getElementById('testPhoneNumber');
+        phoneInput.addEventListener('input', (e) => {
+            let value = e.target.value.replace(/\D/g, '');
+            if (value.length > 0) {
+                value = '+' + value;
+            }
+            e.target.value = value;
+        });
+
+        async function startTestCall() {
+            try {
+                const formData = {
+                    phone_number: document.getElementById('testPhoneNumber').value,
+                    amount: parseFloat(document.getElementById('testAmount').value),
+                    due_date: document.getElementById('testDueDate').value,
+                    account_number: document.getElementById('testAccountNumber').value || null
+                };
+
+                // Update UI
+                document.getElementById('callStatus').textContent = 'Initiating call...';
+                document.getElementById('callStatus').style.color = 'var(--warning-color)';
+
+                const response = await fetch('/api/call', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify(formData)
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({}));
+                    throw new Error(errorData.detail || 'Failed to initiate call');
+                }
+
+                const data = await response.json();
+                
+                // Update UI with call information
+                document.getElementById('callId').textContent = data.call_id;
+                document.getElementById('callStatus').textContent = 'Call in progress';
+                document.getElementById('callStatus').style.color = 'var(--success-color)';
+                
+                // Start duration timer
+                startCallTimer();
+                
+                // Add system message
+                addMessage('Call initiated successfully', 'system');
+                
+                // Start WebSocket connection for real-time updates
+                connectWebSocket(data.call_id);
+                
+            } catch (error) {
+                console.error('Error:', error);
+                addMessage(`Failed to initiate call: ${error.message}`, 'system');
+                document.getElementById('callStatus').textContent = 'Call failed';
+                document.getElementById('callStatus').style.color = 'var(--error-color)';
+            }
         }
 
         async function startRecording() {
@@ -143,64 +156,25 @@
 
                 mediaRecorder.onstop = async () => {
                     const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
-                    
-                    // Convert blob to base64
-                    const reader = new FileReader();
-                    reader.readAsDataURL(audioBlob);
-                    reader.onloadend = async () => {
-                        const base64Audio = reader.result.split(',')[1]; // Remove data URL prefix
-                        
-                        try {
-                            logMessage('Sending audio for transcription...');
-                            const response = await fetch('/api/test-stt', {
-                                method: 'POST',
-                                headers: {
-                                    'Content-Type': 'application/json'
-                                },
-                                body: JSON.stringify({
-                                    audio_data: base64Audio,
-                                    file_name: 'recording.wav'
-                                })
-                            });
-                            const data = await response.json();
-                            
-                            if (data.transcript) {
-                                logMessage(`Transcription: ${data.transcript}`, 'success');
-                                transcript.textContent = `Transcription: ${data.transcript}`;
-                                
-                                // Get LLM response
-                                logMessage('Getting AI response...');
-                                const llmResponse = await fetch('/api/test-llm', {
-                                    method: 'POST',
-                                    headers: { 'Content-Type': 'application/json' },
-                                    body: JSON.stringify({ transcript: data.transcript })
-                                });
-                                const llmData = await llmResponse.json();
-                                
-                                if (llmData.response) {
-                                    logMessage(`AI Response: ${llmData.response}`, 'success');
-                                    
-                                    // Get TTS response
-                                    logMessage('Converting response to speech...');
-                                    const ttsResponse = await fetch('/api/test-tts', {
-                                        method: 'POST',
-                                        headers: { 'Content-Type': 'application/json' },
-                                        body: JSON.stringify({ text: llmData.response })
-                                    });
-                                    
-                                    if (ttsResponse.ok) {
-                                        const audioBlob = await ttsResponse.blob();
-                                        const audioUrl = URL.createObjectURL(audioBlob);
-                                        const audio = new Audio(audioUrl);
-                                        audio.play();
-                                        logMessage('Playing AI response...', 'success');
-                                    }
-                                }
-                            }
-                        } catch (error) {
-                            logMessage(`Error: ${error.message}`, 'error');
+                    const formData = new FormData();
+                    formData.append('audio', audioBlob);
+
+                    try {
+                        logMessage('Sending audio for processing...');
+                        const response = await fetch('/webhook/twilio', {
+                            method: 'POST',
+                            body: formData
+                        });
+
+                        if (!response.ok) {
+                            throw new Error('Failed to process audio');
                         }
-                    };
+
+                        const result = await response.json();
+                        logMessage('Audio processed successfully', 'success');
+                    } catch (error) {
+                        logMessage(`Error: ${error.message}`, 'error');
+                    }
                 };
 
                 mediaRecorder.start();
@@ -220,24 +194,83 @@
         async function playGreeting() {
             try {
                 logMessage('Playing greeting...');
-                const response = await fetch('/api/test-tts', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ 
-                        text: "Hello, I am your AI debt collection agent. How can I help you today?"
-                    })
-                });
+                const response = await fetch('/audio_files/greeting.mp3');
                 
-                if (response.ok) {
-                    const audioBlob = await response.blob();
-                    const audioUrl = URL.createObjectURL(audioBlob);
-                    const audio = new Audio(audioUrl);
-                    audio.play();
-                    logMessage('Playing greeting...', 'success');
+                if (!response.ok) {
+                    throw new Error('Failed to fetch greeting audio');
                 }
+
+                const audioBlob = await response.blob();
+                const audioUrl = URL.createObjectURL(audioBlob);
+                const audio = new Audio(audioUrl);
+                await audio.play();
+                logMessage('Playing greeting...', 'success');
             } catch (error) {
                 logMessage(`Error: ${error.message}`, 'error');
             }
+        }
+
+        function startCallTimer() {
+            callStartTime = Date.now();
+            durationInterval = setInterval(updateDuration, 1000);
+        }
+
+        function updateDuration() {
+            const duration = Math.floor((Date.now() - callStartTime) / 1000);
+            const minutes = Math.floor(duration / 60).toString().padStart(2, '0');
+            const seconds = (duration % 60).toString().padStart(2, '0');
+            document.getElementById('callDuration').textContent = `${minutes}:${seconds}`;
+        }
+
+        function addMessage(text, type) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${type}`;
+            messageDiv.textContent = text;
+            document.getElementById('conversationContainer').appendChild(messageDiv);
+            messageDiv.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function logMessage(message, type = 'info') {
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+            entry.textContent = `${new Date().toLocaleTimeString()}: ${message}`;
+            document.getElementById('log').appendChild(entry);
+            document.getElementById('log').scrollTop = document.getElementById('log').scrollHeight;
+        }
+
+        function connectWebSocket(callId) {
+            const ws = new WebSocket(`ws://${window.location.host}/ws/call/${callId}`);
+
+            ws.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                
+                switch (data.type) {
+                    case 'transcript':
+                        addMessage(data.text, data.speaker === 'agent' ? 'agent' : 'customer');
+                        break;
+                        
+                    case 'call_ended':
+                        clearInterval(durationInterval);
+                        document.getElementById('callStatus').textContent = 'Call ended';
+                        document.getElementById('callStatus').style.color = 'var(--text-secondary)';
+                        addMessage('Call ended', 'system');
+                        ws.close();
+                        break;
+                        
+                    case 'error':
+                        addMessage(`Error: ${data.message}`, 'system');
+                        break;
+                }
+            };
+
+            ws.onerror = (error) => {
+                console.error('WebSocket error:', error);
+                addMessage('Connection error occurred', 'system');
+            };
+
+            ws.onclose = () => {
+                console.log('WebSocket connection closed');
+            };
         }
     </script>
 </body>

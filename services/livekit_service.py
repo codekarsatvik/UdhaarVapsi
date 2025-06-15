@@ -8,6 +8,7 @@ import jwt
 import time
 import aiohttp
 from config import get_settings
+import numpy as np
 
 logger = logging.getLogger(__name__)
 
@@ -112,17 +113,46 @@ class LiveKitService:
 
             # Create or get existing audio track
             if room_name not in self.audio_tracks:
-                track = rtc.LocalAudioTrack.create()
+                # Create audio track with specific parameters
+                track = rtc.LocalAudioTrack.create(
+                    name="agent_audio",
+                    source=rtc.AudioSource.MICROPHONE,
+                    options={
+                        "sampleRate": 48000,
+                        "channels": 1,
+                        "bitsPerSample": 16
+                    }
+                )
                 self.audio_tracks[room_name] = track
                 await room.local_participant.publish_track(track)
                 logger.debug(f"Created and published audio track for room: {room_name}")
 
+            # Ensure audio data is in the correct format
+            if not isinstance(audio_data, bytes):
+                raise ValueError(f"Audio data must be in bytes format, got {type(audio_data)}")
+
+            # Log audio data details
+            logger.debug(f"Audio data length: {len(audio_data)} bytes")
+            
             # Send audio data
             track = self.audio_tracks[room_name]
-            await track.write(audio_data)
-            logger.debug(f"Sent audio data to room: {room_name}")
+            try:
+                # Convert bytes to numpy array for validation
+                audio_array = np.frombuffer(audio_data, dtype=np.int16)
+                logger.debug(f"Audio array shape: {audio_array.shape}, dtype: {audio_array.dtype}")
+                
+                # Ensure the audio data is in the correct format
+                if audio_array.dtype != np.int16:
+                    audio_array = audio_array.astype(np.int16)
+                    audio_data = audio_array.tobytes()
+                
+                await track.write(audio_data)
+                logger.debug(f"Successfully sent audio data to room: {room_name}")
+            except Exception as write_error:
+                logger.error(f"Error writing to audio track: {str(write_error)}", exc_info=True)
+                raise
         except Exception as e:
-            logger.error(f"Error sending audio: {str(e)}")
+            logger.error(f"Error sending audio: {str(e)}", exc_info=True)
             raise
 
     async def cleanup_room(self, room_name: str):

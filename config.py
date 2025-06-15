@@ -1,6 +1,7 @@
 from pydantic_settings import BaseSettings
 from functools import lru_cache
 from typing import Optional
+import os
 
 class Settings(BaseSettings):
     # Twilio Configuration
@@ -25,10 +26,10 @@ class Settings(BaseSettings):
     elevenlabs_voice_id: str = "21m00Tcm4TlvDq8ikWAM"  # Rachel - most natural voice
     
     # Application Configuration
-    APP_HOST: str = "8dcf-2409-40d0-1c-503f-4415-7b7a-6aec-63de.ngrok-free.app"  # Your ngrok URL
+    APP_HOST: str = "localhost:8000"  # Default value
     app_port: int = 8000
     debug: bool = True
-    is_test_environment: bool = False  # Set to False since we're using ngrok
+    is_test_environment: bool = False
     
     # Conversation Settings
     max_conversation_turns: int = 5
@@ -39,6 +40,19 @@ class Settings(BaseSettings):
         env_file = ".env"
         case_sensitive = True
 
-@lru_cache()
+    def update_app_host(self, new_host: str):
+        """Update the APP_HOST value"""
+        self.APP_HOST = new_host
+        # Update environment variable to persist the change
+        os.environ["APP_HOST"] = new_host
+
+# Create a global settings instance
+_settings = Settings()
+
 def get_settings() -> Settings:
-    return Settings()
+    """Get the current settings instance"""
+    return _settings
+
+def update_app_host(new_host: str):
+    """Update the APP_HOST in the global settings instance"""
+    _settings.update_app_host(new_host)

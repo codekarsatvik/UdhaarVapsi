@@ -3,83 +3,68 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Debt Collection Agent</title>
-    <link rel="stylesheet" href="styles.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <title>AI Debt Collection Voice Agent</title>
+    <link rel="stylesheet" href="/static/styles.css">
 </head>
 <body>
-    <div class="container">
-        <header>
-            <h1>AI Debt Collection Agent</h1>
-            <p>Make automated collection calls with AI</p>
-        </header>
+    <header>
+        <h1>AI Debt Collection Voice Agent</h1>
+        <p>Automated debt collection calls with AI-powered voice agent</p>
+    </header>
 
-        <main>
-            <div class="call-form">
-                <h2>Initiate Call</h2>
-                <form id="callForm">
-                    <div class="form-group">
-                        <label for="phoneNumber">Phone Number</label>
-                        <input type="tel" id="phoneNumber" name="phoneNumber" required 
-                               placeholder="+1234567890" pattern="^\+[1-9]\d{1,14}$">
-                    </div>
-
-                    <div class="form-group">
-                        <label for="amount">Amount Due ($)</label>
-                        <input type="number" id="amount" name="amount" required 
-                               step="0.01" min="0" placeholder="152.45">
-                    </div>
-
-                    <div class="form-group">
-                        <label for="dueDate">Due Date</label>
-                        <input type="date" id="dueDate" name="dueDate" required>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="accountNumber">Account Number (Optional)</label>
-                        <input type="text" id="accountNumber" name="accountNumber" 
-                               placeholder="ACC123456">
-                    </div>
-
-                    <button type="submit" class="call-button">
-                        <span class="button-text">Start Call</span>
-                        <div class="loading-spinner"></div>
-                    </button>
-                </form>
+    <main>
+        <form id="callForm" class="call-form">
+            <h2>Initiate Call</h2>
+            <div class="form-group">
+                <label for="phoneNumber">Phone Number</label>
+                <input type="tel" id="phoneNumber" name="phoneNumber" placeholder="+1234567890" required>
             </div>
+            <div class="form-group">
+                <label for="amount">Amount Due</label>
+                <input type="number" id="amount" name="amount" step="0.01" required>
+            </div>
+            <div class="form-group">
+                <label for="dueDate">Due Date</label>
+                <input type="date" id="dueDate" name="dueDate" required>
+            </div>
+            <div class="form-group">
+                <label for="accountNumber">Account Number (Optional)</label>
+                <input type="text" id="accountNumber" name="accountNumber">
+            </div>
+            <button type="submit" class="call-button">
+                <span class="button-text">Start Call</span>
+                <div class="loading-spinner"></div>
+            </button>
+        </form>
 
-            <div class="call-status">
-                <h2>Call Status</h2>
-                <div id="statusContainer">
-                    <div class="status-card">
-                        <div class="status-header">
-                            <span class="status-label">Status</span>
-                            <span class="status-value" id="callStatus">No active call</span>
-                        </div>
-                        <div class="status-details">
-                            <div class="detail-item">
-                                <span class="detail-label">Call ID:</span>
-                                <span class="detail-value" id="callId">-</span>
-                            </div>
-                            <div class="detail-item">
-                                <span class="detail-label">Duration:</span>
-                                <span class="detail-value" id="callDuration">00:00</span>
-                            </div>
-                        </div>
+        <div class="call-status">
+            <h2>Call Status</h2>
+            <div class="status-card">
+                <div class="status-header">
+                    <span class="status-label">Status:</span>
+                    <span id="callStatus" class="status-value">Not Started</span>
+                </div>
+                <div class="status-details">
+                    <div class="detail-item">
+                        <span class="detail-label">Call ID:</span>
+                        <span id="callId" class="detail-value">-</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Duration:</span>
+                        <span id="callDuration" class="detail-value">00:00</span>
                     </div>
                 </div>
             </div>
+        </div>
 
-            <div class="conversation-log">
-                <h2>Conversation Log</h2>
-                <div id="conversationContainer" class="conversation-container">
-                    <div class="message system">
-                        System ready. Start a call to begin.
-                    </div>
-                </div>
+        <div class="conversation-log">
+            <h2>Conversation Log</h2>
+            <div id="conversationContainer" class="conversation-container">
+                <!-- Messages will be added here dynamically -->
             </div>
-        </main>
-    </div>
-    <script src="app.js"></script>
+        </div>
+    </main>
+
+    <script src="/static/app.js"></script>
 </body>
 </html> 
