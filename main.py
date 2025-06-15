@@ -4,7 +4,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from typing import Optional
 import uvicorn
-from config import get_settings
+from config import get_settings, Settings
 from services.twilio_service import TwilioService
 from services.livekit_service import LiveKitService
 from services.stt_service import DeepgramService
@@ -29,6 +29,7 @@ from datetime import datetime
 import numpy as np
 import wave
 import io
+import requests
 
 # Configure logging
 logging.basicConfig(
@@ -42,8 +43,47 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
+def get_ngrok_url():
+    """Get the current ngrok URL"""
+    try:
+        # Try to get ngrok URL from the ngrok API
+        response = requests.get("http://localhost:4040/api/tunnels")
+        if response.status_code == 200:
+            tunnels = response.json()["tunnels"]
+            for tunnel in tunnels:
+                if tunnel["proto"] == "https":
+                    return tunnel["public_url"].replace("https://", "")
+        return None
+    except Exception as e:
+        logger.error(f"Error getting ngrok URL: {str(e)}")
+        return None
+
+def update_app_host():
+    """Update APP_HOST with current ngrok URL"""
+    try:
+        ngrok_url = get_ngrok_url()
+        if ngrok_url:
+            # Update the settings
+            settings = get_settings()
+            settings.update_app_host(ngrok_url)
+            logger.info(f"Updated APP_HOST to: {ngrok_url}")
+            return True
+        return False
+    except Exception as e:
+        logger.error(f"Error updating APP_HOST: {str(e)}")
+        return False
+
 app = FastAPI(title="AI Debt Collection Voice Agent")
 settings = get_settings()
+
+# Update APP_HOST on startup
+@app.on_event("startup")
+async def startup_event():
+    """Update APP_HOST with ngrok URL on startup"""
+    if update_app_host():
+        logger.info("Successfully updated APP_HOST with ngrok URL")
+    else:
+        logger.warning("Failed to update APP_HOST with ngrok URL")
 
 # Mount static files
 app.mount("/static", StaticFiles(directory="static"), name="static")
@@ -163,7 +203,7 @@ async def initiate_call(data: CallRequest):
             call = twilio_client.calls.create(
                 to=data.phone_number,
                 from_=settings.TWILIO_PHONE_NUMBER,
-                url=f"https://{settings.APP_HOST}:{settings.app_port}/twiml/{call_id}"
+                url=f"https://{settings.APP_HOST}/twiml/{call_id}"
             )
             
             return {"call_id": call_id, "status": "initiated", "twilio_sid": call.sid}
@@ -185,7 +225,7 @@ async def generate_twiml(call_id: str):
         
         # Create a Connect verb with Stream
         connect = Connect()
-        stream_url = f"wss://8dcf-2409-40d0-1c-503f-4415-7b7a-6aec-63de.ngrok-free.app/stream/{call_id}"
+        stream_url = f"wss://{settings.APP_HOST}/stream/{call_id}"
         logger.info(f"Using WebSocket URL: {stream_url}")
         connect.stream(url=stream_url)
         response.append(connect)
@@ -198,7 +238,7 @@ async def generate_twiml(call_id: str):
     except Exception as e:
         logger.error(f"Error generating TwiML: {str(e)}")
         response = VoiceResponse()
-        response.say("We're experiencing technical difficulties. Please try again later.", voice="Polly.Amy")
+        response.say("An error occurred. Please try again later.", voice="Polly.Amy")
         return Response(content=str(response), media_type="application/xml")
 
 @app.websocket("/stream/{call_id}")
@@ -610,8 +650,8 @@ async def test_call(data: CallRequest):
             raise HTTPException(status_code=500, detail="Failed to create LiveKit room")
         
         # Construct webhook URLs with HTTPS
-        twiml_url = f"https://8dcf-2409-40d0-1c-503f-4415-7b7a-6aec-63de.ngrok-free.app/twiml/{call_id}"
-        status_callback_url = f"https://8dcf-2409-40d0-1c-503f-4415-7b7a-6aec-63de.ngrok-free.app/webhook/twilio"
+        twiml_url = f"https://{settings.APP_HOST}/twiml/{call_id}"
+        status_callback_url = f"https://{settings.APP_HOST}/webhook/twilio"
         
         logger.info(f"Using TwiML URL: {twiml_url}")
         logger.info(f"Using Status Callback URL: {status_callback_url}")

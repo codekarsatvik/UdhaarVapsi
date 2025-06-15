@@ -1,6 +1,6 @@
 from twilio.rest import Client
 from twilio.twiml.voice_response import VoiceResponse, Connect
-from config import Settings
+from config import get_settings
 import logging
 from typing import Optional
 
@@ -8,8 +8,9 @@ logger = logging.getLogger(__name__)
 
 class TwilioService:
     def __init__(self, account_sid: str, auth_token: str, phone_number: str):
-        self.client = Client(account_sid, auth_token, region='us1')
+        self.client = Client(account_sid, auth_token)
         self.phone_number = phone_number
+        self.settings = get_settings()
 
     async def make_call(self, to_number: str, room_name: str) -> str:
         """
@@ -19,7 +20,12 @@ class TwilioService:
             # Create TwiML for the call
             response = VoiceResponse()
             connect = Connect()
-            connect.stream(url=f"wss://{self.settings.app_host}/stream/{room_name}")
+            
+            # Add status callback
+            connect.stream(
+                url=f"wss://{self.settings.APP_HOST}/stream/{room_name}",
+                status_callback=f"https://{self.settings.APP_HOST}/webhook/twilio/status"
+            )
             response.append(connect)
             
             # Add a fallback message
@@ -30,7 +36,7 @@ class TwilioService:
                 to=to_number,
                 from_=self.phone_number,
                 twiml=str(response),
-                status_callback=f"https://8dcf-2409-40d0-1c-503f-4415-7b7a-6aec-63de.ngrok-free.app/webhook/twilio/status",
+                status_callback=f"https://{self.settings.APP_HOST}/webhook/twilio/status",
                 status_callback_event=['initiated', 'ringing', 'answered', 'completed']
             )
             
@@ -67,7 +73,7 @@ class TwilioService:
         try:
             response = VoiceResponse()
             connect = Connect()
-            connect.stream(url=f"wss://8dcf-2409-40d0-1c-503f-4415-7b7a-6aec-63de.ngrok-free.app/stream/{room_name}")
+            connect.stream(url=f"wss://{self.settings.APP_HOST}/stream/{room_name}")
             response.append(connect)
             
             # Add a fallback message
@@ -78,4 +84,18 @@ class TwilioService:
             logger.error(f"Error generating TwiML: {str(e)}")
             response = VoiceResponse()
             response.say("We're experiencing technical difficulties. Please try again later.")
-            return str(response) 
+            return str(response)
+
+    async def handle_incoming_call(self, room_name: str):
+        try:
+            # Generate TwiML for incoming call
+            response = VoiceResponse()
+            connect = Connect()
+            connect.stream(url=f"wss://{self.settings.APP_HOST}/stream/{room_name}")
+            response.append(connect)
+            
+            return str(response)
+            
+        except Exception as e:
+            logger.error(f"Error handling incoming call: {str(e)}")
+            raise 

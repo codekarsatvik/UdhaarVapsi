@@ -1,44 +1,50 @@
 from pydantic_settings import BaseSettings
 from functools import lru_cache
-from typing import Optional
+import os
 
 class Settings(BaseSettings):
-    # Twilio Configuration
+    # Twilio settings
     TWILIO_ACCOUNT_SID: str
     TWILIO_AUTH_TOKEN: str
     TWILIO_PHONE_NUMBER: str
     
-    # LiveKit Configuration
+    # LiveKit settings
     LIVEKIT_API_KEY: str
     LIVEKIT_API_SECRET: str
     LIVEKIT_URL: str
     
-    # Deepgram Configuration
+    # Deepgram settings
     DEEPGRAM_API_KEY: str
     
-    # Groq Configuration
+    # Groq settings
     GROQ_API_KEY: str
-    GROQ_MODEL: str  # Model will be read from environment variable
+    GROQ_MODEL: str = "mixtral-8x7b-32768"
     
-    # ElevenLabs Configuration
+    # ElevenLabs settings
     ELEVENLABS_API_KEY: str
-    elevenlabs_voice_id: str = "21m00Tcm4TlvDq8ikWAM"  # Rachel - most natural voice
+    elevenlabs_voice_id: str = "21m00Tcm4TlvDq8ikWAM"  # Rachel voice
     
-    # Application Configuration
-    APP_HOST: str = "8dcf-2409-40d0-1c-503f-4415-7b7a-6aec-63de.ngrok-free.app"  # Your ngrok URL
+    # Application settings
+    APP_HOST: str = "localhost"  # Your application host
     app_port: int = 8000
-    debug: bool = True
-    is_test_environment: bool = False  # Set to False since we're using ngrok
+    debug: bool = False
+    is_test_environment: bool = True  # Set to False for production
     
     # Conversation Settings
     max_conversation_turns: int = 5
     silence_threshold: float = 0.5  # seconds
     response_timeout: float = 10.0  # seconds
 
+    def update_app_host(self, new_host: str):
+        """Update the APP_HOST value"""
+        self.APP_HOST = new_host
+        # Clear the cache to force a reload of settings
+        get_settings.cache_clear()
+
     class Config:
         env_file = ".env"
         case_sensitive = True
 
 @lru_cache()
-def get_settings() -> Settings:
+def get_settings():
     return Settings()
