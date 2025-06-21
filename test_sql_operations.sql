@@ -13,7 +13,7 @@ INSERT INTO test_data (user_name) VALUES
 
 -- Update table
 UPDATE test_data 
-SET user_name = 'Alice Smith' 
+SET user_name = 'Satvik' 
 WHERE id = 1;
 
 -- Create materialized view
